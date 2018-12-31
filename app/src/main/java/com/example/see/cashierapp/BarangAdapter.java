@@ -63,7 +63,7 @@ public class BarangAdapter extends RecyclerView.Adapter<BarangAdapter.BarangView
     public class BarangViewHolder extends RecyclerView.ViewHolder{
         TextView namaBarang, hargaBarang;
         ImageView cbox, mbox;
-        EditText edtQty;
+        TextView edtQty;
         public BarangViewHolder(@NonNull View itemView) {
             super(itemView);
             namaBarang = itemView.findViewById(R.id.tvNamaBarang);

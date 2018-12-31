@@ -1,13 +1,20 @@
 package com.example.see.cashierapp;
 
 import android.app.DatePickerDialog;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Typeface;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.FileProvider;
 import android.support.v4.content.res.ResourcesCompat;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -19,8 +26,24 @@ import android.widget.EditText;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import org.apache.poi.hssf.usermodel.HSSFCellStyle;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.util.HSSFColor;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Type;
+import java.net.URLConnection;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -34,10 +57,12 @@ public class EarningFragment extends Fragment {
 
     private EditText edtDateFrom, edtDateTo;
     private TableLayout tabelEarning;
-    private TextView tvTotalEarning;
-    private Button btnShow;
+    private TextView tvTotalEarning, tvDateTimeEarning;
+    private Button btnShow, btnExport;
     private Calendar calendar;
     private DatabaseHelper databaseHelper;
+    private String dateFrom, dateTo;
+    private long totalEarning = 0;
 
     @Nullable
     @Override
@@ -49,6 +74,8 @@ public class EarningFragment extends Fragment {
         tabelEarning = myView.findViewById(R.id.tabelEarning);
         btnShow = myView.findViewById(R.id.btnShow);
         tvTotalEarning = myView.findViewById(R.id.tvTotalEarning);
+        tvDateTimeEarning = myView.findViewById(R.id.tvDateTimeEarning);
+        btnExport = myView.findViewById(R.id.btnExport);
 
         calendar = Calendar.getInstance();
         databaseHelper = new DatabaseHelper(getContext());
@@ -95,15 +122,135 @@ public class EarningFragment extends Fragment {
                 updateTable();
             }
         });
+        btnExport.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                exportToExcel();
+                File file = new File(Environment.getExternalStorageDirectory(), "earning.xls");
+                Uri path = FileProvider.getUriForFile(getActivity(), getActivity().getApplicationContext().getPackageName() + ".provider", file);
+                if (Build.VERSION.SDK_INT >= 24) {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setDataAndType(path, "application/vnd.ms-excel");
+                    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    PackageManager pm = getActivity().getPackageManager();
+                    if (intent.resolveActivity(pm) != null) {
+                        getActivity().getApplicationContext().startActivity(intent);
+                    }
+                } else {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setDataAndType(Uri.parse("file://" + path), "application/vnd.ms-excel").setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getActivity().getApplicationContext().startActivity(intent);
+                }
+            }
+        });
 
 
         return myView;
     }
 
+    private void exportToExcel() {
+        if (!isExternalStorageAvailable() || isExternalStorageReadOnly()) {
+            Toast.makeText(getContext(), "Storage is not available or read only", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Workbook wb = new HSSFWorkbook();
+        Cell c = null;
+
+        CellStyle cs = wb.createCellStyle();
+        cs.setAlignment(CellStyle.ALIGN_CENTER);
+
+        Sheet sheet1 = null;
+        sheet1 = wb.createSheet("Earning");
+
+        Row rowHead = sheet1.createRow(0);
+        c = rowHead.createCell(0);
+        c.setCellValue("No Order");
+        c.setCellStyle(cs);
+        c = rowHead.createCell(1);
+        c.setCellValue("Tanggal");
+        c.setCellStyle(cs);
+        c = rowHead.createCell(2);
+        c.setCellValue("Waktu");
+        c.setCellStyle(cs);
+        c = rowHead.createCell(3);
+        c.setCellValue("Earning");
+        c.setCellStyle(cs);
+
+        SQLiteDatabase database = databaseHelper.getReadableDatabase();
+        Cursor cursor = database.rawQuery("SELECT * FROM " + TABLE_TRANSAKSI + " WHERE tanggal_transaksi BETWEEN '" + dateFrom+"'" +
+                " AND '" + dateTo +"'", null);
+        cursor.moveToFirst();
+        int countRow = 1;
+        for (int i = 1; i <= cursor.getCount(); i++) {
+            cursor.moveToPosition(i-1);
+            Row row = sheet1.createRow(i);
+            c = row.createCell(0);
+            c.setCellValue(cursor.getInt(0));
+            c.setCellStyle(cs);
+            c = row.createCell(1);
+            c.setCellValue(cursor.getString(1));
+            c.setCellStyle(cs);
+            c = row.createCell(2);
+            c.setCellValue(cursor.getString(2));
+            c.setCellStyle(cs);
+            c = row.createCell(3);
+            c.setCellValue(cursor.getInt(3));
+            c.setCellStyle(cs);
+            countRow++;
+        }
+        Row rows = sheet1.createRow(countRow+1);
+        c = rows.createCell(2);
+        c.setCellValue("Total");
+        c.setCellStyle(cs);
+
+        c = rows.createCell(3);
+        c.setCellValue(totalEarning);
+        c.setCellStyle(cs);
+
+        Row rowsTgl = sheet1.createRow(countRow+2);
+        c = rowsTgl.createCell(2);
+        c.setCellValue("Tanggal");
+        c.setCellStyle(cs);
+
+        c = rowsTgl.createCell(3);
+        c.setCellValue(dateFrom + " - " + dateTo);
+        c.setCellStyle(cs);
+
+        sheet1.setColumnWidth(0, (15 * 150));
+        sheet1.setColumnWidth(1, (15 * 300));
+        sheet1.setColumnWidth(2, (15 * 300));
+        sheet1.setColumnWidth(3, (15 * 500));
+
+        File file = new File(getContext().getExternalFilesDir(null), "earning.xls");
+        FileOutputStream os = null;
+
+        try {
+            os = new FileOutputStream(file);
+            wb.write(os);
+            Toast.makeText(getContext(), "Export Success", Toast.LENGTH_SHORT).show();
+            System.out.println("PATH : " + file.getAbsolutePath());
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (null != os) {
+                    os.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private void updateTable() {
         tabelEarning.removeAllViews();
-        String dateFrom = edtDateFrom.getText().toString();
-        String dateTo = edtDateTo.getText().toString();
+        dateFrom = edtDateFrom.getText().toString();
+        dateTo = edtDateTo.getText().toString();
+
+        tvDateTimeEarning.setText("Data Tanggal : " + dateFrom + " - " + dateTo);
 
         Typeface typefaceMedium = ResourcesCompat.getFont(getContext(), R.font.rubik_medium);
         Typeface typefaceRegular = ResourcesCompat.getFont(getContext(), R.font.rubik_regular);
@@ -136,7 +283,6 @@ public class EarningFragment extends Fragment {
                 " AND '" + dateTo +"'", null);
         ArrayList<String> listTanggal = new ArrayList<>();
         ArrayList<String> listEarning = new ArrayList<>();
-        long totalEarning = 0;
         cursor.moveToFirst();
         for (int i = 0; i < cursor.getCount(); i++) {
             cursor.moveToPosition(i);
@@ -170,6 +316,7 @@ public class EarningFragment extends Fragment {
         tvTotalEarning.setText("Total     : Rp. " + String.valueOf(NumberFormat.getInstance(Locale.US).format(totalEarning)));
         tvTotalEarning.setVisibility(View.VISIBLE);
         tabelEarning.setVisibility(View.VISIBLE);
+        btnExport.setEnabled(true);
     }
 
     private void updateDateTo() {
@@ -180,5 +327,21 @@ public class EarningFragment extends Fragment {
     private void updateDate() {
         SimpleDateFormat df = new SimpleDateFormat("dd/MM/yyyy");
         edtDateFrom.setText(df.format(calendar.getTime()));
+    }
+
+    private Boolean isExternalStorageReadOnly(){
+        String extStorageState = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(extStorageState)) {
+            return true;
+        }
+        return false;
+    }
+
+    private Boolean isExternalStorageAvailable() {
+        String extStorageState = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(extStorageState)) {
+            return true;
+        }
+        return false;
     }
 }

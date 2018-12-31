@@ -45,6 +45,14 @@
                 android:backgroundTint="@color/colorPrimary"
                 android:textColor="#FFF"
                 android:layout_marginTop="5dp"/>
+            <TextView
+                android:id="@+id/tvDateTimeEarning"
+                android:textSize="12sp"
+                android:fontFamily="@font/rubik_medium"
+                android:layout_marginTop="10dp"
+                android:padding="10dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
             <TableLayout
                 android:id="@+id/tabelEarning"
                 android:layout_width="match_parent"
@@ -81,6 +89,25 @@
                 android:layout_height="wrap_content"
                 android:layout_marginRight="20dp"
                 android:gravity="end"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp">
+                <TextView
+                    android:text=" "
+                    android:layout_weight="1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+                <Button
+                    android:id="@+id/btnExport"
+                    android:text="EXPORT"
+                    android:backgroundTint="@color/colorPrimary"
+                    android:textColor="#FFF"
+                    android:enabled="false"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 </RelativeLayout>

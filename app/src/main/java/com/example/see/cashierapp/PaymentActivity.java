@@ -10,6 +10,8 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -19,6 +21,7 @@ import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -58,10 +61,11 @@ public class PaymentActivity extends AppCompatActivity {
         listKategori = (ArrayList<Kategori>)getIntent().getSerializableExtra("listKategori");
         databaseHelper = new DatabaseHelper(this);
 
+        edtUang.addTextChangedListener(onTextChangedListener());
+
         for (Kategori k : listKategori) {
             for (Barang b : k.getListBarang()) {
                 if (b.getQty() > 0) {
-                    System.out.println("MASUK PAK EKO");
                     TableRow tableRow = new TableRow(this);
                     TextView textViewMenu = new TextView(this);
                     TextView textViewQty = new TextView(this);
@@ -85,15 +89,17 @@ public class PaymentActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (bayar) {
-                    Intent intent = new Intent(PaymentActivity.this, MainActivity.class);
+                    Intent intent = new Intent(PaymentActivity.this, ReceiptActivity.class);
+                    intent.putExtra("listKategori", listKategori);
                     startActivity(intent);
                     bayar = false;
                 } else {
-                    Long uangBayar = Long.parseLong(edtUang.getText().toString());
+                    String uang = edtUang.getText().toString().replace(",","");
+                    Long uangBayar = Long.parseLong(uang);
                     if (totalHarga > uangBayar) {
                         Toast.makeText(getApplicationContext(), "Uang Anda Kurang", Toast.LENGTH_SHORT).show();
                     } else {
-                        btnPay.setText("Finish");
+                        btnPay.setText("Nota");
                         tvTotalKembalian.setText("Rp. " + String.valueOf(NumberFormat.getInstance(Locale.US).format(uangBayar - totalHarga)));
                         Toast.makeText(getApplicationContext(), "Pembayaran Berhasil", Toast.LENGTH_SHORT).show();
                         bayar = true;
@@ -112,5 +118,46 @@ public class PaymentActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private TextWatcher onTextChangedListener() {
+        return new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                edtUang.removeTextChangedListener(this);
+
+                try {
+                    String originalString = s.toString();
+
+                    Long longval;
+                    if (originalString.contains(",")) {
+                        originalString = originalString.replaceAll(",", "");
+                    }
+                    longval = Long.parseLong(originalString);
+
+                    DecimalFormat formatter = (DecimalFormat) NumberFormat.getInstance(Locale.US);
+                    formatter.applyPattern("#,###,###,###");
+                    String formattedString = formatter.format(longval);
+
+                    //setting text after format to EditText
+                    edtUang.setText(formattedString);
+                    edtUang.setSelection(edtUang.getText().length());
+                } catch (NumberFormatException nfe) {
+                    nfe.printStackTrace();
+                }
+
+                edtUang.addTextChangedListener(this);
+            }
+        };
     }
 }

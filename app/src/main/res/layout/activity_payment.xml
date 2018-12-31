@@ -51,8 +51,8 @@
                         android:fontFamily="@font/rubik_medium"/>
                     <EditText
                         android:id="@+id/edtUang"
-                        android:hint="Rp. "
                         android:inputType="number"
+                        android:hint="Rp. "
                         android:fontFamily="@font/rubik_regular"/>
                 </TableRow>
                 <TableRow>
