@@ -45,6 +45,7 @@ public class PaymentActivity extends AppCompatActivity {
     private long totalHarga;
     private DatabaseHelper databaseHelper;
     private Boolean bayar = false;
+    private Long uangBayar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,11 +92,12 @@ public class PaymentActivity extends AppCompatActivity {
                 if (bayar) {
                     Intent intent = new Intent(PaymentActivity.this, ReceiptActivity.class);
                     intent.putExtra("listKategori", listKategori);
+                    intent.putExtra("uang", uangBayar);
                     startActivity(intent);
                     bayar = false;
                 } else {
                     String uang = edtUang.getText().toString().replace(",","");
-                    Long uangBayar = Long.parseLong(uang);
+                    uangBayar = Long.parseLong(uang);
                     if (totalHarga > uangBayar) {
                         Toast.makeText(getApplicationContext(), "Uang Anda Kurang", Toast.LENGTH_SHORT).show();
                     } else {

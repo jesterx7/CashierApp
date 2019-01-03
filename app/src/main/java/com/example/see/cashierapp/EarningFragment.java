@@ -247,6 +247,7 @@ public class EarningFragment extends Fragment {
 
     private void updateTable() {
         tabelEarning.removeAllViews();
+        tvTotalEarning.setText("");
         dateFrom = edtDateFrom.getText().toString();
         dateTo = edtDateTo.getText().toString();
 
@@ -281,6 +282,7 @@ public class EarningFragment extends Fragment {
         SQLiteDatabase database = databaseHelper.getReadableDatabase();
         Cursor cursor = database.rawQuery("SELECT * FROM " + TABLE_TRANSAKSI + " WHERE tanggal_transaksi BETWEEN '" + dateFrom+"'" +
                 " AND '" + dateTo +"'", null);
+        System.out.println("CURSOR HASIL : " +cursor);
         ArrayList<String> listTanggal = new ArrayList<>();
         ArrayList<String> listEarning = new ArrayList<>();
         cursor.moveToFirst();
